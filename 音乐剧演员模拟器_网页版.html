@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>音乐剧演员模拟器</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f5f5f5}
+.card{background:white;padding:15px;margin:10px 0;border-radius:10px}
+button{padding:8px 12px;margin:4px}
+input,select{padding:6px}
+#log{height:300px;overflow:auto;background:#111;color:#0f0;padding:10px}
+</style>
+</head>
+<body>
+<h1>🎭 音乐剧演员模拟器（网页版）</h1>
+
+<div class="card" id="setup">
+<h3>创建角色</h3>
+姓名 <input id="name" value="新人演员">
+性别 <select id="gender"><option>男</option><option>女</option></select>
+出身 <select id="origin">
+<option>普通家庭</option><option>艺术家庭</option><option>中产家庭</option><option>富二代</option><option>高干家庭</option>
+</select>
+<button onclick="startGame()">开始游戏</button>
+</div>
+
+<div id="game" style="display:none">
+<div class="card">
+<h3>角色面板</h3>
+<div id="stats"></div>
+</div>
+
+<div class="card">
+<h3>每月行动</h3>
+<button onclick="action('voice')">声乐课</button>
+<button onclick="action('dance')">舞蹈课</button>
+<button onclick="action('acting')">表演课</button>
+<button onclick="action('gym')">健身</button>
+<button onclick="action('rest')">休息</button>
+<button onclick="action('social')">社交</button>
+<button onclick="nextMonth()">结束本月</button>
+</div>
+
+<div class="card">
+<h3>事件日志</h3>
+<div id="log"></div>
+</div>
+</div>
+
+<script>
+let p={};
+
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function log(t){document.getElementById("log").innerHTML+=t+"<br>";}
+
+function startGame(){
+const origin=document.getElementById("origin").value;
+let money={
+"普通家庭":rnd(5000,8000),
+"艺术家庭":rnd(8000,12000),
+"中产家庭":rnd(10000,15000),
+"富二代":45000,
+"高干家庭":rnd(8000,12000)
+}[origin];
+
+p={
+name:document.getElementById("name").value,
+gender:document.getElementById("gender").value,
+origin,
+month:1,
+age:18,
+money,
+fans:rnd(50,500),
+looks:rnd(60,100),
+sing:rnd(50,100),
+dance:rnd(50,100),
+acting:rnd(50,100),
+health:100,
+fatigue:0,
+fame:"无人知晓",
+shows:0
+};
+document.getElementById("setup").style.display="none";
+document.getElementById("game").style.display="block";
+update();
+log("欢迎来到音乐剧演员模拟器！");
+}
+
+function update(){
+document.getElementById("stats").innerHTML=`
+<b>${p.name}</b>｜${p.age}岁｜第${p.month}个月<br>
+💰金钱:${p.money} ｜ 👥粉丝:${p.fans}<br>
+🎤唱功:${p.sing} ｜ 💃舞蹈:${p.dance} ｜ 🎭演技:${p.acting}<br>
+❤️健康:${p.health} ｜ 😵疲劳:${p.fatigue}<br>
+⭐知名度:${p.fame}
+`;
+}
+
+function action(type){
+switch(type){
+case "voice":
+p.sing+=rnd(1,3); p.money-=300; break;
+case "dance":
+p.dance+=rnd(1,3); p.money-=300; break;
+case "acting":
+p.acting+=rnd(1,3); p.money-=300; break;
+case "gym":
+p.health+=rnd(1,2); p.fatigue=Math.max(0,p.fatigue-3); p.money-=50; break;
+case "rest":
+p.health+=rnd(2,4); p.fatigue=Math.max(0,p.fatigue-4); break;
+case "social":
+p.fans+=rnd(10,80); p.money-=150; break;
+}
+log("执行行动："+type);
+update();
+}
+
+function audition(){
+let score=(p.sing+p.acting)/2+rnd(-10,10);
+if(score>65){
+let income=rnd(400,800);
+p.money+=income;
+p.fans+=rnd(100,500);
+p.shows+=1;
+log("🎉 面试成功！获得演出机会，收入+"+income);
+}else{
+log("😢 面试未通过。");
+}
+}
+
+function randomEvent(){
+if(rnd(1,12)<=3){
+const events=[
+"导演注意到了你的表演",
+"轻微感冒",
+"粉丝要求合影",
+"行业聚会邀请",
+"网络讨论增加"
+];
+let e=events[rnd(0,events.length-1)];
+log("📌随机事件："+e);
+if(e.includes("导演")) p.fans+=200;
+if(e.includes("感冒")) p.health-=5;
+}
+}
+
+function nextMonth(){
+if(p.month%6===0) audition();
+randomEvent();
+
+p.money-=5000;
+p.fatigue+=2;
+
+if(p.fans>5000) p.fame="小有名气";
+if(p.fans>15000) p.fame="圈内知名";
+if(p.fans>30000) p.fame="圈内一线";
+
+p.month++;
+if((p.month-1)%12===0) p.age++;
+
+update();
+}
+</script>
+</body>
+</html>
