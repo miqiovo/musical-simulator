@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎭 音乐剧演员模拟器</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Noto+Serif+SC:wght@400;600&display=swap');
+
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8C96A;
+    --deep: #1A0A2E;
+    --stage: #2D1B4E;
+    --velvet: #6B1D3A;
+    --velvet-light: #9B3D5A;
+    --cream: #F5EDD8;
+    --text: #2A1810;
+    --dim: #7A6855;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Serif SC', serif;
+    background: var(--deep);
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 舞台光效背景 */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(201,168,76,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 80px;
+  }
+
+  /* 顶部状态栏 */
+  #header {
+    background: linear-gradient(180deg, rgba(45,27,78,0.98) 0%, rgba(26,10,46,0.95) 100%);
+    border-bottom: 1px solid rgba(201,168,76,0.3);
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+
+  #header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 8px;
+    padding: 6px 4px;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+
+  .stat-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cream);
+  }
+
+  .stat-value.money { color: #7ED98A; }
+  .stat-value.warn  { color: #FF8C7A; }
+
+  /* 月份标题 */
+  #month-banner {
+    background: linear-gradient(135deg, var(--velvet) 0%, var(--stage) 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 18px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #month-banner::before, #month-banner::after {
+    content: '✦';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold);
+    opacity: 0.4;
+    font-size: 20px;
+  }
+  #month-banner::before { left: 20px; }
+  #month-banner::after { right: 20px; }
+
+  #month-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--gold-light);
+    margin-bottom: 4px;
+  }
+
+  #month-sub {
+    font-size: 12px;
+    color: rgba(245,237,216,0.6);
+    letter-spacing: 2px;
+  }
+
+  /* 主内容 */
+  #main {
+    padding: 16px 20px;
+  }
+
+  /* 事件卡片 */
+  .event-card {
+    background: linear-gradient(145deg, rgba(45,27,78,0.8) 0%, rgba(26,10,46,0.9) 100%);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .event-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .event-tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .event-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--cream);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .event-desc {
+    font-size: 13px;
+    color: rgba(245,237,216,0.75);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+
+  .event-emoji {
+    font-size: 32px;
+    float: right;
+    margin: -4px 0 8px 12px;
+  }
+
+  /* 选项按钮 */
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .choice-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--cream);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .choice-btn:hover, .choice-btn:active {
+    background: rgba(201,168,76,0.15);
+    border-color: var(--gold);
+    transform: translateX(2px);
+  }
+
+  .choice-btn .cost {
+    font-size: 11px;
+    color: var(--gold);
+    opacity: 0.8;
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+
+  /* 行动区域 */
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin: 20px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(201,168,76,0.2);
+  }
+
+  .actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .action-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 10px;
+    padding: 14px 10px;
+    color: var(--cream);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .action-btn:hover, .action-btn:active {
+    background: rgba(107,29,58,0.4);
+    border-color: var(--velvet-light);
+  }
+
+  .action-btn .icon { font-size: 22px; display: block; margin-bottom: 4px; }
+  .action-btn .name { font-weight: 600; margin-bottom: 3px; }
+  .action-btn .detail { font-size: 10px; color: rgba(245,237,216,0.5); }
+
+  /* 结果消息 */
+  #result-msg {
+    background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--cream);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  /* 下一月按钮 */
+  #next-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--velvet) 0%, #8B2550 100%);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 16px;
+    color: var(--gold-light);
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #next-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    transition: left 0.4s;
+  }
+
+  #next-btn:hover::before { left: 100%; }
+  #next-btn:hover { box-shadow: 0 4px 20px rgba(201,168,76,0.25); }
+
+  /* 技能条 */
+  .skill-bars {
+    margin-bottom: 16px;
+  }
+
+  .skill-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .skill-name {
+    font-size: 11px;
+    color: var(--dim);
+    width: 36px;
+    flex-shrink: 0;
+  }
+
+  .skill-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .skill-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--velvet-light), var(--gold));
+    transition: width 0.5s ease;
+  }
+
+  .skill-num {
+    font-size: 11px;
+    color: var(--gold);
+    width: 28px;
+    text-align: right;
+  }
+
+  /* 结局画面 */
+  #ending {
+    display: none;
+    padding: 40px 20px;
+    text-align: center;
+  }
+
+  #ending-icon { font-size: 64px; margin-bottom: 16px; }
+
+  #ending h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    color: var(--gold-light);
+    margin-bottom: 12px;
+  }
+
+  #ending p {
+    font-size: 14px;
+    color: rgba(245,237,216,0.75);
+    line-height: 1.8;
+    margin-bottom: 24px;
+  }
+
+  #restart-btn {
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    padding: 12px 32px;
+    color: var(--gold);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 14px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  #restart-btn:hover {
+    background: rgba(201,168,76,0.1);
+  }
+
+  /* 开始画面 */
+  #start-screen {
+    padding: 40px 20px;
+    text-align: center;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .curtain-emoji { font-size: 56px; margin-bottom: 12px; }
+
+  #start-screen h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  #start-screen .tagline {
+    font-size: 13px;
+    color: rgba(245,237,216,0.55);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+
+  .intro-card {
+    background: rgba(45,27,78,0.6);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 14px;
+    padding: 20px;
+    text-align: left;
+    margin-bottom: 24px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: rgba(245,237,216,0.8);
+  }
+
+  #start-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--velvet) 0%, #8B2550 100%);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 18px;
+    color: var(--gold-light);
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  #start-btn:hover { box-shadow: 0 4px 24px rgba(201,168,76,0.3); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(26,10,46,0.95);
+    border: 1px solid var(--gold);
+    border-radius: 24px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: var(--gold-light);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- 开始画面 -->
+<div id="start-screen">
+  <div class="curtain-emoji">🎭</div>
+  <h1>音乐剧演员<br>模拟器</h1>
+  <p class="tagline">MUSICAL THEATRE SIMULATOR</p>
+  <div class="intro-card">
+    你是一名刚到上海的音乐剧演员，怀揣梦想，口袋里只有 <strong style="color:var(--gold)">¥8,000</strong>。<br><br>
+    接下来的 <strong style="color:var(--gold)">12个月</strong>里，你需要练习唱功、参加试镜、演出赚钱，同时维持生计。<br><br>
+    能站上百老汇级别的舞台，还是黯然离场？<strong>命运由你书写。</strong>
+  </div>
+  <button id="start-btn" onclick="startGame()">▶ 开幕</button>
+</div>
+
+<!-- 游戏主界面 -->
+<div id="game-screen" style="display:none">
+  <div id="header">
+    <h1>🎭 音乐剧演员模拟器</h1>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">月份</div>
+        <div class="stat-value" id="s-month">1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">存款</div>
+        <div class="stat-value money" id="s-money">8000</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">名气</div>
+        <div class="stat-value" id="s-fame">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">体力</div>
+        <div class="stat-value" id="s-energy">100</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="month-banner">
+    <div id="month-title">第 1 月</div>
+    <div id="month-sub">新的征程</div>
+  </div>
+
+  <div id="main">
+    <!-- 技能条 -->
+    <div class="section-title">技能</div>
+    <div class="skill-bars">
+      <div class="skill-row">
+        <span class="skill-name">唱功</span>
+        <div class="skill-bar"><div class="skill-fill" id="bar-sing" style="width:60%"></div></div>
+        <span class="skill-num" id="num-sing">60</span>
+      </div>
+      <div class="skill-row">
+        <span class="skill-name">舞蹈</span>
+        <div class="skill-bar"><div class="skill-fill" id="bar-dance" style="width:40%"></div></div>
+        <span class="skill-num" id="num-dance">40</span>
+      </div>
+      <div class="skill-row">
+        <span class="skill-name">表演</span>
+        <div class="skill-bar"><div class="skill-fill" id="bar-act" style="width:50%"></div></div>
+        <span class="skill-num" id="num-act">50</span>
+      </div>
+    </div>
+
+    <!-- 月度事件 -->
+    <div class="section-title">本月事件</div>
+    <div id="event-area"></div>
+
+    <!-- 结果消息 -->
+    <div id="result-msg"></div>
+
+    <!-- 行动 -->
+    <div class="section-title">本月行动 <span style="color:var(--dim);font-size:10px;text-transform:none;letter-spacing:0">（剩余次数：<span id="actions-left">2</span>）</span></div>
+    <div class="actions-grid">
+      <button class="action-btn" onclick="doAction('sing')">
+        <span class="icon">🎤</span>
+        <div class="name">声乐训练</div>
+        <div class="detail">¥500 · 唱功+5~8</div>
+      </button>
+      <button class="action-btn" onclick="doAction('dance')">
+        <span class="icon">💃</span>
+        <div class="name">舞蹈课</div>
+        <div class="detail">¥400 · 舞蹈+5~8</div>
+      </button>
+      <button class="action-btn" onclick="doAction('act')">
+        <span class="icon">🎭</span>
+        <div class="name">表演工作坊</div>
+        <div class="detail">¥300 · 表演+5~8</div>
+      </button>
+      <button class="action-btn" onclick="doAction('parttime')">
+        <span class="icon">🍵</span>
+        <div class="name">咖啡厅兼职</div>
+        <div class="detail">+¥2000 · 体力-20</div>
+      </button>
+      <button class="action-btn" onclick="doAction('audition')">
+        <span class="icon">🎪</span>
+        <div class="name">参加试镜</div>
+        <div class="detail">名气+? · 有风险</div>
+      </button>
+      <button class="action-btn" onclick="doAction('rest')">
+        <span class="icon">🛁</span>
+        <div class="name">休息恢复</div>
+        <div class="detail">免费 · 体力+40</div>
+      </button>
+    </div>
+
+    <button id="next-btn" onclick="nextMonth()">幕落 · 进入下一月 →</button>
+  </div>
+</div>
+
+<!-- 结局画面 -->
+<div id="ending">
+  <div id="ending-icon"></div>
+  <h2 id="ending-title"></h2>
+  <p id="ending-desc"></p>
+  <button id="restart-btn" onclick="restartGame()">重新开始</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+// ─── 游戏状态 ───────────────────────────────────────
+let G = {};
+
+function initState() {
+  G = {
+    month: 1, money: 8000,
+    sing: 60, dance: 40, act: 50,
+    fame: 0, energy: 100,
+    actionsLeft: 2,
+    history: []
+  };
+}
+
+// ─── 随机事件库 ─────────────────────────────────────
+const EVENTS = [
+  {
+    tag: '机遇', icon: '🌟',
+    title: '知名导演来上海选角',
+    desc: '传说中的沪剧名导李鸿章正在为新剧《夜上海》物色主角。消息传来，圈内人人摩拳擦掌。',
+    choices: [
+      { text: '积极备稿，主动投简历', cost: '消耗体力 20', fn: (G) => {
+        G.energy -= 20;
+        let r = Math.random();
+        if ((G.sing + G.act) / 2 > 70 || r > 0.5) {
+          G.fame += 15; G.money += 3000;
+          return '导演看中了你的潜力！获得了一个小角色，收入 ¥3,000，名气 +15 ✨';
+        } else {
+          G.fame += 5;
+          return '没被选中，但导演记住了你的名字。名气 +5。';
+        }
+      }},
+      { text: '先观望，等下次机会', cost: '无消耗', fn: (G) => {
+        return '你选择保留体力，静待下一个机会。';
+      }}
+    ]
+  },
+  {
+    tag: '困境', icon: '😰',
+    title: '房东突然涨租',
+    desc: '你租住的合租房房东以"市场价调整"为由，要求每月多缴 ¥800，或者搬走。',
+    choices: [
+      { text: '接受涨租，继续住', cost: '-¥800', fn: (G) => {
+        G.money -= 800;
+        return '咬牙接受了涨租。钱包又瘦了一圈，但起码有个稳定的排练空间。-¥800';
+      }},
+      { text: '搬去演员公寓合住', cost: '+体力消耗', fn: (G) => {
+        G.energy -= 15; G.money -= 200;
+        G.fame += 3;
+        return '搬进了演员公寓！认识了几个志同道合的伙伴，名气 +3，但搬家很累。-¥200';
+      }}
+    ]
+  },
+  {
+    tag: '惊喜', icon: '🎉',
+    title: '前辈推荐商业演出',
+    desc: '你在社群里活跃的前辈张老师，主动推荐你参加一场商业晚会演出。报酬还不错。',
+    choices: [
+      { text: '接受！上台表演', cost: '体力-15', fn: (G) => {
+        G.money += 4000; G.energy -= 15; G.fame += 8;
+        return '演出顺利！观众反应热烈。收入 ¥4,000，名气 +8 🎊';
+      }},
+      { text: '婉拒，专注主线排练', cost: '无', fn: (G) => {
+        G.sing += 3; G.act += 3;
+        return '你将时间用于自我提升，唱功和表演各 +3。';
+      }}
+    ]
+  },
+  {
+    tag: '挑战', icon: '😤',
+    title: '剧团公开竞演',
+    desc: '某知名音乐剧团正在举办公开竞演，前三名可签约入团。这是每个演员梦寐以求的机会。',
+    choices: [
+      { text: '报名参赛，全力一搏', cost: '体力-30', fn: (G) => {
+        G.energy -= 30;
+        let score = G.sing * 0.4 + G.dance * 0.3 + G.act * 0.3 + Math.random() * 20;
+        if (score > 75) {
+          G.fame += 25; G.money += 5000;
+          return `你以精湛的实力进入前三！签约奖金 ¥5,000，名气 +25！🏆`;
+        } else if (score > 55) {
+          G.fame += 10;
+          return `进入决赛但未能夺冠。名气 +10，保持信心！`;
+        } else {
+          G.fame += 3;
+          return `这次发挥一般，但积累了宝贵经验。名气 +3。`;
+        }
+      }},
+      { text: '再等等，技能还不够', cost: '无', fn: (G) => {
+        return '你决定继续磨炼，等待更好的时机。';
+      }}
+    ]
+  },
+  {
+    tag: '日常', icon: '🎵',
+    title: '遇见音乐剧迷',
+    desc: '在地铁上，你随口哼唱《悲惨世界》，被旁边的音乐剧发烧友认出，两人相谈甚欢。',
+    choices: [
+      { text: '互加联系方式，扩展人脉', cost: '无', fn: (G) => {
+        G.fame += 5;
+        return '对方原来是某剧院的工作人员！名气 +5，多了一个圈内朋友。';
+      }},
+      { text: '礼貌回应，保持神秘', cost: '无', fn: (G) => {
+        return '你保持了低调，微笑离开。（下次抓住机会吧！）';
+      }}
+    ]
+  },
+  {
+    tag: '危机', icon: '🤒',
+    title: '嗓子发炎，无法发声',
+    desc: '连续熬夜排练，嗓子终于抗议了。医生叮嘱必须静养一周。',
+    choices: [
+      { text: '乖乖休息，好好养嗓', cost: '无', fn: (G) => {
+        G.energy += 30;
+        return '休养一周，体力恢复 +30。嗓子的感谢你。';
+      }},
+      { text: '带病坚持，不能停', cost: '体力-20，唱功-5', fn: (G) => {
+        G.energy -= 20; G.sing -= 5;
+        G.money += 1000;
+        return '咬牙坚持完成了一场演出，得到 ¥1,000，但嗓音受损，唱功 -5。⚠️';
+      }}
+    ]
+  },
+  {
+    tag: '机遇', icon: '📺',
+    title: '综艺节目邀约',
+    desc: '一档热门音综《闪耀舞台》的制片联系了你，邀你担任特别嘉宾。这会让你一夜走红。',
+    choices: [
+      { text: '接受，登上综艺舞台', cost: '体力-10', fn: (G) => {
+        G.fame += 20; G.money += 6000; G.energy -= 10;
+        return '节目播出后粉丝暴涨！名气 +20，出场费 ¥6,000 💥';
+      }},
+      { text: '拒绝，坚守剧场初心', cost: '无', fn: (G) => {
+        G.act += 5; G.fame += 2;
+        return '你选择专注舞台艺术，圈内口碑悄然上升。表演 +5，名气 +2。';
+      }}
+    ]
+  },
+  {
+    tag: '日常', icon: '🤝',
+    title: '前辈邀请观摩彩排',
+    desc: '业界前辈邀请你观摩一部高水准音乐剧的内部彩排，这是难得的学习机会。',
+    choices: [
+      { text: '认真观摩，记录笔记', cost: '无', fn: (G) => {
+        G.sing += 4; G.act += 4; G.dance += 2;
+        return '深受启发！唱功 +4，表演 +4，舞蹈 +2 📓';
+      }},
+      { text: '去了但走神，在想下一场试镜', cost: '无', fn: (G) => {
+        return '走了神，没学到太多。也许下次会更专注。';
+      }}
+    ]
+  }
+];
+
+let currentEvent = null;
+let currentMonth = 0;
+
+// ─── 开始游戏 ─────────────────────────────────────
+function startGame() {
+  initState();
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  loadMonth();
+}
+
+function loadMonth() {
+  updateUI();
+  // 随机抽取事件
+  const idx = Math.floor(Math.random() * EVENTS.length);
+  currentEvent = EVENTS[idx];
+  renderEvent(currentEvent);
+  document.getElementById('result-msg').style.display = 'none';
+  document.getElementById('actions-left').textContent = G.actionsLeft;
+}
+
+function renderEvent(ev) {
+  const area = document.getElementById('event-area');
+  area.innerHTML = `
+    <div class="event-card">
+      <span class="event-emoji">${ev.icon}</span>
+      <span class="event-tag">${ev.tag}</span>
+      <div class="event-title">${ev.title}</div>
+      <div class="event-desc">${ev.desc}</div>
+      <div class="choices" id="choices-area">
+        ${ev.choices.map((c, i) => `
+          <button class="choice-btn" onclick="makeChoice(${i})">
+            <span>${c.text}</span>
+            <span class="cost">${c.cost}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function makeChoice(i) {
+  const choice = currentEvent.choices[i];
+  const result = choice.fn(G);
+  // 隐藏选项，显示结果
+  document.getElementById('choices-area').innerHTML =
+    `<div style="font-size:12px;color:var(--dim);text-align:center;padding:8px">已选择：${choice.text}</div>`;
+  showResult('🎬 ' + result);
+  updateUI();
+}
+
+function showResult(msg) {
+  const el = document.getElementById('result-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ─── 行动系统 ─────────────────────────────────────
+function doAction(type) {
+  if (G.actionsLeft <= 0) { showToast('本月行动次数已用完'); return; }
+
+  let msg = '';
+  switch(type) {
+    case 'sing':
+      if (G.money < 500) { showToast('钱不够！需要 ¥500'); return; }
+      G.money -= 500; G.energy -= 10;
+      let sg = 5 + Math.floor(Math.random() * 4);
+      G.sing = Math.min(100, G.sing + sg);
+      msg = `声乐训练完成！唱功 +${sg}，-¥500 🎤`;
+      break;
+    case 'dance':
+      if (G.money < 400) { showToast('钱不够！需要 ¥400'); return; }
+      G.money -= 400; G.energy -= 10;
+      let dn = 5 + Math.floor(Math.random() * 4);
+      G.dance = Math.min(100, G.dance + dn);
+      msg = `舞蹈课结束！舞蹈 +${dn}，-¥400 💃`;
+      break;
+    case 'act':
+      if (G.money < 300) { showToast('钱不够！需要 ¥300'); return; }
+      G.money -= 300; G.energy -= 10;
+      let ac = 5 + Math.floor(Math.random() * 4);
+      G.act = Math.min(100, G.act + ac);
+      msg = `工作坊收获满满！表演 +${ac}，-¥300 🎭`;
+      break;
+    case 'parttime':
+      if (G.energy < 20) { showToast('体力不足，先休息一下吧'); return; }
+      G.money += 2000; G.energy -= 20;
+      msg = `咖啡厅兼职结束，辛苦了！+¥2,000，体力 -20 ☕`;
+      break;
+    case 'audition':
+      if (G.energy < 15) { showToast('体力不足，无法参加试镜'); return; }
+      G.energy -= 15;
+      let avg = (G.sing + G.dance + G.act) / 3;
+      let luck = Math.random();
+      if (luck > 0.7 || avg > 70) {
+        let gain = 5 + Math.floor(Math.random() * 10);
+        let money = Math.floor(Math.random() * 2000) + 1000;
+        G.fame += gain; G.money += money;
+        msg = `试镜成功！名气 +${gain}，获得报酬 ¥${money} 🌟`;
+      } else if (luck > 0.3) {
+        G.fame += 3;
+        msg = `试镜结果不理想，但积累了经验。名气 +3。`;
+      } else {
+        msg = `这次没被选中，继续加油！`;
+      }
+      break;
+    case 'rest':
+      G.energy = Math.min(100, G.energy + 40);
+      msg = `好好休息了一天，精力恢复！体力 +40 🛁`;
+      break;
+  }
+
+  G.actionsLeft--;
+  document.getElementById('actions-left').textContent = G.actionsLeft;
+  showResult(msg);
+  updateUI();
+}
+
+// ─── 下一月 ───────────────────────────────────────
+function nextMonth() {
+  // 每月固定支出
+  let living = 5000;
+  G.money -= living;
+  G.month++;
+  G.actionsLeft = 2;
+  G.energy = Math.min(100, G.energy + 20); // 月末恢复
+
+  if (G.money <= 0 && G.month <= 12) {
+    showEnding('broke');
+    return;
+  }
+
+  if (G.month > 12) {
+    showEnding('finish');
+    return;
+  }
+
+  updateUI();
+  loadMonth();
+  showToast(`进入第 ${G.month} 月，房租已扣除 ¥5,000`);
+}
+
+// ─── 结局 ─────────────────────────────────────────
+const ENDINGS = {
+  broke: {
+    icon: '😢',
+    title: '资金耗尽，梦想暂停',
+    desc: (G) => `你在第 ${G.month} 个月耗尽了积蓄，不得不回老家休整。但舞台的灯光从未在你心中熄灭——这只是故事的开始，不是终点。`
+  },
+  finish: {
+    icon: (G) => G.fame >= 60 ? '🏆' : G.fame >= 30 ? '⭐' : '🎭',
+    title: (G) => G.fame >= 60 ? '名扬四海！' : G.fame >= 30 ? '崭露头角' : '坚持就是胜利',
+    desc: (G) => {
+      if (G.fame >= 60) return `12个月后，你的名气值达到了 ${G.fame}，成为上海音乐剧圈炙手可热的新星。存款 ¥${G.money.toLocaleString()}，技能均衡，前途无量！`;
+      if (G.fame >= 30) return `12个月后，你在圈内有了一定知名度（名气 ${G.fame}）。虽还未成名，但口碑和技能都在稳步提升，继续努力！`;
+      return `12个月过去了，你坚持了下来（名气 ${G.fame}）。这条路比想象中艰难，但你没有放弃——这本身就值得骄傲。`;
+    }
+  }
+};
+
+function showEnding(type) {
+  document.getElementById('game-screen').style.display = 'none';
+  const el = document.getElementById('ending');
+  el.style.display = 'block';
+  const e = ENDINGS[type];
+  const icon = typeof e.icon === 'function' ? e.icon(G) : e.icon;
+  const title = typeof e.title === 'function' ? e.title(G) : e.title;
+  const desc = typeof e.desc === 'function' ? e.desc(G) : e.desc;
+  document.getElementById('ending-icon').textContent = icon;
+  document.getElementById('ending-title').textContent = title;
+  document.getElementById('ending-desc').textContent = desc;
+}
+
+function restartGame() {
+  document.getElementById('ending').style.display = 'none';
+  document.getElementById('start-screen').style.display = 'flex';
+}
+
+// ─── UI 更新 ───────────────────────────────────────
+const MONTH_SUBS = ['新的征程','寒风中的坚持','春回大地','樱花盛开','五月的考验',
+  '盛夏光年','流火七月','秋风渐起','金秋时节','收获与失落','凛冬将至','最后的舞台'];
+
+function updateUI() {
+  document.getElementById('s-month').textContent = G.month;
+  document.getElementById('s-money').textContent = '¥' + G.money.toLocaleString();
+  document.getElementById('s-money').className = 'stat-value ' + (G.money < 3000 ? 'warn' : 'money');
+  document.getElementById('s-fame').textContent = G.fame;
+  document.getElementById('s-energy').textContent = G.energy;
+  document.getElementById('month-title').textContent = `第 ${G.month} 月`;
+  document.getElementById('month-sub').textContent = MONTH_SUBS[G.month - 1] || '';
+
+  const skills = [
+    { id: 'sing', val: G.sing },
+    { id: 'dance', val: G.dance },
+    { id: 'act', val: G.act }
+  ];
+  skills.forEach(s => {
+    document.getElementById('bar-' + s.id).style.width = s.val + '%';
+    document.getElementById('num-' + s.id).textContent = s.val;
+  });
+}
+
+// ─── Toast ────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
